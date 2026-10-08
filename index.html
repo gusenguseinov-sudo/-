@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Школа продаж</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: sans-serif; background: #f2f6f0; color: #1d2b1f; }
+  #app { max-width: 520px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 26px; margin: 12px 0 4px; color: #2e7d32; }
+  h2 { font-size: 19px; line-height: 1.35; margin: 12px 0; }
+  .sub { margin: 0 0 20px; color: #4a5a4c; }
+  .prog { font-size: 14px; color: #4a5a4c; margin-top: 8px; }
+  .note { font-size: 13px; color: #6a7a6c; margin-top: 24px; }
+  .btn, .opt { display: block; width: 100%; margin: 10px 0; padding: 14px; font-size: 16px;
+               border-radius: 12px; text-align: left; cursor: pointer; }
+  .btn { border: none; }
+  .btn small { display: block; margin-top: 4px; opacity: .85; font-size: 13px; }
+  .primary { background: #2e7d32; color: #fff; }
+  .opt { background: #fff; color: #1d2b1f; border: 2px solid #cfd8cc; }
+  .opt.ok { border-color: #2e7d32; background: #e8f5e9; }
+  .opt.mid { border-color: #f9a825; background: #fff8e1; }
+  .opt.bad { border-color: #c62828; background: #ffebee; }
+  .bubble { background: #fff; border-left: 5px solid #2e7d32; padding: 14px; border-radius: 10px; font-size: 17px; }
+  .who { font-size: 13px; color: #6a7a6c; margin-bottom: 4px; }
+  .fb { background: #fff; border-radius: 10px; padding: 14px; margin: 12px 0; line-height: 1.45; }
+  .score { font-size: 40px; font-weight: bold; color: #2e7d32; margin: 16px 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ===== Данные: правильный ответ в вопросах викторины всегда первый (порядок перемешивается при показе) ===== */
+const QUIZ = [
+  { q: "Какой класс износостойкости ламината лучше выбрать для кухни и прихожей с высокой проходимостью?",
+    o: ["32–33", "21", "22", "Класс не имеет значения"],
+    why: "Классы 32–33 рассчитаны на повышенную нагрузку. Классы 21–22 — для редко посещаемых помещений." },
+  { q: "Что показывает крутящий момент дрели-шуруповёрта?",
+    o: ["С какой силой инструмент закручивает крепёж и сверлит плотные материалы",
+        "Сколько оборотов в минуту делает патрон",
+        "Сколько времени работает аккумулятор",
+        "Какого диаметра свёрла подходят к патрону"],
+    why: "Крутящий момент измеряется в Н·м: чем он выше, тем более крупный крепёж и плотный материал по силам инструменту." },
+  { q: "Какая цветовая температура у лампы с тёплым белым светом?",
+    o: ["2700–3000 K", "4000 K", "5000 K", "6500 K"],
+    why: "2700–3000 K — уютный тёплый свет для гостиной и спальни. 4000 K — нейтральный, 5000–6500 K — холодный дневной." },
+  { q: "Какую краску посоветовать для потолка, если нужно скрыть мелкие неровности?",
+    o: ["Глубокоматовую", "Глянцевую", "Полуглянцевую", "Любую — разницы нет"],
+    why: "Матовая поверхность рассеивает свет и маскирует неровности, а глянец их подчёркивает." },
+  { q: "Что означает маркировка E27 на лампе?",
+    o: ["Резьбовой цоколь диаметром 27 мм", "Мощность 27 Вт", "Напряжение 27 В", "Срок службы 27 000 часов"],
+    why: "E27 — стандартный «большой» резьбовой цоколь. Для небольших ламп и бра часто нужен E14." },
+  { q: "В каких единицах измеряют энергию удара перфоратора?",
+    o: ["В джоулях (Дж)", "В ваттах (Вт)", "В оборотах в минуту", "В ньютон-метрах (Н·м)"],
+    why: "Чем выше энергия удара в джоулях, тем крупнее отверстия можно делать в бетоне. Ватты — это мощность двигателя." },
+  { q: "Где уместно применять влагостойкий гипсокартон?",
+    o: ["В ванной и на кухне, где повышенная влажность", "На фасаде здания", "Как гидроизоляцию под водой", "Только в сухих кладовках"],
+    why: "Влагостойкий лист рассчитан на повышенную влажность, но не на постоянный контакт с водой. В зонах брызг нужна дополнительная гидроизоляция." },
+  { q: "Какой крепёж выбрать для лёгкой полки на стену из гипсокартона?",
+    o: ["Дюбель «бабочка» (молли)", "Гвоздь-дюбель по бетону", "Деревянную пробку", "Саморез без дюбеля"],
+    why: "Специальные дюбели для гипсокартона раскрываются за листом и распределяют нагрузку. Тяжёлые предметы крепят к каркасу или профилю." }
+];
+
+/* s — баллы за ответ: 2 лучший, 1 приемлемый, 0 слабый */
+const DIALOGS = [
+  { line: "Я просто смотрю.",
+    c: [ { t: "Хорошо, если что — обращайтесь.", s: 0, fb: "Вы закрыли диалог сами. Покупатель остался без помощи, а вы без шанса выяснить потребность." },
+         { t: "Подскажите, что планируете: ремонт или небольшие дела по дому? Покажу, с чего лучше начать.", s: 2, fb: "Открытый вопрос без давления: вы выясняете задачу покупателя и предлагаете конкретную помощь." },
+         { t: "Сегодня на многое скидки, посмотрите наши акции.", s: 1, fb: "Скидки привлекают внимание, но вы пока не узнали, что нужно покупателю." } ] },
+  { line: "Дорого. В интернете такое же дешевле.",
+    c: [ { t: "Тогда лучше купите в интернете.", s: 0, fb: "Вы отказались от продажи и ничего не сделали для покупателя." },
+         { t: "Понимаю, цена важна. Давайте сравним: наличие сегодня, гарантия, обмен и возврат. Что для вас главное?", s: 2, fb: "Вы признали возражение, перевели разговор на ценность и задали вопрос о приоритетах." },
+         { t: "Сейчас посмотрю, какую скидку можно сделать.", s: 1, fb: "Скидка иногда уместна, но предлагать её первой — значит обесценивать товар и свою работу." } ] },
+  { line: "Беру эту дрель.",
+    c: [ { t: "Отлично, касса вон там.", s: 0, fb: "Вы упустили возможность помочь: без подходящих свёрл дрель может оказаться бесполезной." },
+         { t: "Хороший выбор. А что будете сверлить? Подберём свёрла или буры под материал, чтобы всё сразу заработало.", s: 2, fb: "Дополнительные товары предложены как забота о результате, а не как навязывание." },
+         { t: "Возьмите ещё что-нибудь, у нас акция.", s: 0, fb: "Предложение без связи с задачей воспринимается как навязывание." } ] },
+  { line: "Не знаю, какую краску выбрать для детской комнаты.",
+    c: [ { t: "Берите самую дорогую, она точно хорошая.", s: 0, fb: "Цена сама по себе не гарантирует, что краска подойдёт для детской." },
+         { t: "Расскажите про комнату и возраст ребёнка. Подберу варианты без резкого запаха, проверим назначение на упаковке.", s: 2, fb: "Вы уточнили условия и показали, на что обращать внимание, — это формирует доверие." },
+         { t: "Вот каталог цветов, выбирайте.", s: 1, fb: "Цвет важен, но главные критерии для детской — безопасность и назначение краски." } ] }
+];
+
+/* ===== Вспомогательные функции ===== */
+const $app = document.getElementById("app");
+const byId = (id) => document.getElementById(id);
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function getBest(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (e) { return 0; } }
+function setBest(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+function render(html) { $app.innerHTML = html; window.scrollTo(0, 0); }
+
+let S = {};
+
+/* ===== Меню ===== */
+function menu() {
+  render(`
+    <h1>Школа продаж</h1>
+    <p class="sub">Тренажёр для сотрудников торгового зала: знание товара и работа с покупателем.</p>
+    <button class="btn primary" id="b1">Знание товаров<small>${QUIZ.length} вопросов · рекорд ${getBest("best_quiz")}/${QUIZ.length}</small></button>
+    <button class="btn primary" id="b2">Диалоги с покупателями<small>${DIALOGS.length} ситуации · рекорд ${getBest("best_dialog")}/${DIALOGS.length * 2}</small></button>
+    <p class="note">Вопросы и диалоги — учебные примеры. Замените их на реальный ассортимент и стандарты обслуживания вашего магазина (файл app/src/main/assets/index.html).</p>
+  `);
+  byId("b1").onclick = startQuiz;
+  byId("b2").onclick = startDialogs;
+}
+
+/* ===== Викторина по товарам ===== */
+function startQuiz() { S = { i: 0, score: 0, items: shuffle(QUIZ), done: false }; showQuiz(); }
+
+function showQuiz() {
+  const it = S.items[S.i];
+  const opts = shuffle(it.o.map((t, k) => ({ t, ok: k === 0 })));
+  S.done = false;
+  render(`<div class="prog">Вопрос ${S.i + 1} из ${S.items.length} · Баллы: ${S.score}</div>
+          <h2>${it.q}</h2><div id="opts"></div><div id="fb"></div>`);
+  const box = byId("opts");
+  opts.forEach((o) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = o.t;
+    b.onclick = () => {
+      if (S.done) return;
+      S.done = true;
+      [...box.children].forEach((c, k) => { if (opts[k].ok) c.classList.add("ok"); });
+      if (o.ok) { S.score++; } else { b.classList.add("bad"); }
+      byId("fb").innerHTML = `<div class="fb"><b>${o.ok ? "Верно!" : "Не совсем."}</b> ${it.why}</div>
+                              <button class="btn primary" id="nx">Дальше</button>`;
+      byId("nx").onclick = () => { S.i++; S.i < S.items.length ? showQuiz() : finish(S.score, S.items.length, "best_quiz"); };
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ===== Диалоги с покупателями ===== */
+function startDialogs() { S = { i: 0, score: 0, items: shuffle(DIALOGS), done: false }; showDialog(); }
+
+function showDialog() {
+  const it = S.items[S.i];
+  const choices = shuffle(it.c);
+  S.done = false;
+  render(`<div class="prog">Ситуация ${S.i + 1} из ${S.items.length} · Баллы: ${S.score}</div>
+          <div class="bubble"><div class="who">Покупатель</div>${it.line}</div>
+          <h2>Что вы ответите?</h2><div id="opts"></div><div id="fb"></div>`);
+  const box = byId("opts");
+  choices.forEach((ch) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = ch.t;
+    b.onclick = () => {
+      if (S.done) return;
+      S.done = true;
+      S.score += ch.s;
+      const cls = ch.s === 2 ? "ok" : ch.s === 1 ? "mid" : "bad";
+      b.classList.add(cls);
+      const best = it.c.find((x) => x.s === 2);
+      const hint = ch.s === 2 ? "" : `<br><br><b>Лучший вариант:</b> ${best.t}`;
+      byId("fb").innerHTML = `<div class="fb"><b>+${ch.s} б.</b> ${ch.fb}${hint}</div>
+                              <button class="btn primary" id="nx">Дальше</button>`;
+      byId("nx").onclick = () => { S.i++; S.i < S.items.length ? showDialog() : finish(S.score, S.items.length * 2, "best_dialog"); };
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ===== Итог ===== */
+function finish(score, max, key) {
+  if (score > getBest(key)) setBest(key, score);
+  const r = score / max;
+  const msg = r >= 0.8 ? "Отличный результат! Вы уверенно знаете материал." :
+              r >= 0.5 ? "Хорошо. Повторите ошибочные темы и попробуйте снова." :
+                         "Пока слабо. Повторите материал и пройдите ещё раз.";
+  render(`<h1>Результат</h1><div class="score">${score} / ${max}</div><p>${msg}</p>
+          <p class="sub">Рекорд: ${getBest(key)} / ${max}</p>
+          <button class="btn primary" id="again">Пройти ещё раз</button>
+          <button class="opt" id="home">В меню</button>`);
+  byId("again").onclick = key === "best_quiz" ? startQuiz : startDialogs;
+  byId("home").onclick = menu;
+}
+
+menu();
+</script>
+</body>
+</html>
